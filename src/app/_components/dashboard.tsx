@@ -50,15 +50,7 @@ export function Dashboard({ user }: DashboardProps) {
   return (
     <div className="min-h-screen bg-gray-950 pb-24 font-sans text-gray-100">
       <nav className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-800 bg-gray-900/80 px-4 py-3 backdrop-blur">
-        <div className="flex items-center gap-6">
-          <h1 className="text-lg font-bold text-white">Mi Presupuesto</h1>
-          <Link
-            href="/transacciones"
-            className="text-sm font-medium text-gray-400 transition-colors hover:text-white"
-          >
-            Historial
-          </Link>
-        </div>
+        <h1 className="text-lg font-bold text-white">Mi Presupuesto</h1>
         <div className="flex items-center gap-4">
           <span className="text-sm text-gray-400">
             {user.name ?? user.email}
@@ -423,7 +415,14 @@ export function Dashboard({ user }: DashboardProps) {
       </main>
 
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 bg-gradient-to-t from-gray-950 via-gray-950/90 to-transparent px-4 pt-10 pb-6 sm:px-6">
-        <div className="pointer-events-auto mx-auto flex max-w-md items-center gap-3">
+        <div className="pointer-events-auto mx-auto flex max-w-lg items-center gap-3">
+          <Link
+            href="/transacciones"
+            className="flex h-14 items-center justify-center gap-2 rounded-2xl border border-gray-700/50 bg-gray-800/90 px-5 text-sm font-medium text-gray-200 shadow-lg backdrop-blur transition-all hover:bg-gray-700 active:scale-95"
+          >
+            <span className="text-xl">📋</span>
+            <span className="hidden sm:inline">Transacciones</span>
+          </Link>
           <button
             type="button"
             onClick={() => setAccountModalOpen(true)}

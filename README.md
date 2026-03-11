@@ -37,7 +37,7 @@ Una herramienta moderna y elegante diseñada para el control integral de tus fin
 - **Adeudos**: Control de deudas (me deben / debo) con soporte para múltiples personas por transacción
 - **Compras MSI**: Gestión de compras a meses sin intereses con cálculo automático de mensualidades
 - **Suscripciones**: Seguimiento de pagos recurrentes
-- **Historial**: Vista completa de transacciones con filtros y detalles de adeudos
+- **Transacciones**: Vista agrupada por fecha con filtros avanzados (cuentas, categorías, tipo, periodos de facturación)
 
 ---
 
