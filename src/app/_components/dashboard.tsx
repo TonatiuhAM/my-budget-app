@@ -7,7 +7,6 @@ import { GaugeChart } from "./gauge-chart";
 import { ExpandableCard, DetailTable } from "./expandable-card";
 import { Modal } from "./modal";
 import { TransactionForm } from "./transaction-form";
-import { AccountForm } from "./account-form";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
 
@@ -20,7 +19,6 @@ interface DashboardProps {
 
 export function Dashboard({ user }: DashboardProps) {
   const [transactionModalOpen, setTransactionModalOpen] = useState(false);
-  const [accountModalOpen, setAccountModalOpen] = useState(false);
 
   const { data: saldos } = api.dashboard.getSaldos.useQuery();
   const { data: tarjetas } = api.tarjetas.getResumenCredito.useQuery();
@@ -423,14 +421,13 @@ export function Dashboard({ user }: DashboardProps) {
             <span className="text-xl">📋</span>
             <span className="hidden sm:inline">Transacciones</span>
           </Link>
-          <button
-            type="button"
-            onClick={() => setAccountModalOpen(true)}
+          <Link
+            href="/cuentas"
             className="flex h-14 items-center justify-center gap-2 rounded-2xl border border-gray-700/50 bg-gray-800/90 px-5 text-sm font-medium text-gray-200 shadow-lg backdrop-blur transition-all hover:bg-gray-700 active:scale-95"
           >
             <span className="text-xl">🏦</span>
-            <span className="hidden sm:inline">Cuenta</span>
-          </button>
+            <span className="hidden sm:inline">Cuentas</span>
+          </Link>
           <button
             type="button"
             onClick={() => setTransactionModalOpen(true)}
@@ -450,17 +447,6 @@ export function Dashboard({ user }: DashboardProps) {
         <TransactionForm
           onSuccess={() => setTransactionModalOpen(false)}
           onCancel={() => setTransactionModalOpen(false)}
-        />
-      </Modal>
-
-      <Modal
-        isOpen={accountModalOpen}
-        onClose={() => setAccountModalOpen(false)}
-        title="Nueva Cuenta"
-      >
-        <AccountForm
-          onSuccess={() => setAccountModalOpen(false)}
-          onCancel={() => setAccountModalOpen(false)}
         />
       </Modal>
     </div>
