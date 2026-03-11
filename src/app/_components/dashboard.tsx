@@ -55,7 +55,9 @@ export function Dashboard({ user }: DashboardProps) {
           </span>
           <button
             type="button"
-            onClick={() => signOut({ callbackUrl: "/auth/signin" })}
+            onClick={() =>
+              signOut({ callbackUrl: `${window.location.origin}/auth/signin` })
+            }
             className="text-sm text-gray-500 transition-colors hover:text-white"
           >
             Cerrar sesión
