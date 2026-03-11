@@ -33,7 +33,7 @@ export const adeudosRouter = createTRPCRouter({
 
       return ctx.db.adeudo.update({
         where: { id: input.id },
-        data: { estaPagado: true },
+        data: { estaPagado: true, fechaPago: new Date() },
       });
     }),
 

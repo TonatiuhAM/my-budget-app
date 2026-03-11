@@ -90,10 +90,13 @@ model Adeudo {
     monto         Decimal     @db.Decimal(12, 2)
     tipo          TipoAdeudo
     estaPagado    Boolean     @default(false)
+    fechaCreacion DateTime    @default(now())
+    fechaPago     DateTime?
     transaccionId String      // Removed @unique to allow multiple debtors per transaction
     transaccion   Transaccion @relation(fields: [transaccionId], references: [id], onDelete: Cascade)
 
     @@index([transaccionId])
+    @@index([estaPagado])
 }
 
 model CompraMSI {

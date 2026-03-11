@@ -428,6 +428,13 @@ export function Dashboard({ user }: DashboardProps) {
             <span className="text-xl">🏦</span>
             <span className="hidden sm:inline">Cuentas</span>
           </Link>
+          <Link
+            href="/deudas"
+            className="flex h-14 items-center justify-center gap-2 rounded-2xl border border-gray-700/50 bg-gray-800/90 px-5 text-sm font-medium text-gray-200 shadow-lg backdrop-blur transition-all hover:bg-gray-700 active:scale-95"
+          >
+            <span className="text-xl">🤝</span>
+            <span className="hidden sm:inline">Deudas</span>
+          </Link>
           <button
             type="button"
             onClick={() => setTransactionModalOpen(true)}
