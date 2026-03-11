@@ -27,14 +27,17 @@ Una herramienta moderna y elegante diseñada para el control integral de tus fin
 - Toggle intuitivo entre **Gastos e Ingresos**
 - Categorización personalizada de movimientos
 - Selección de cuenta origen/destino
-- **División de adeudos** para compras a meses sin intereses (MSI)
+- **Compras MSI**: Divide automáticamente compras a meses sin intereses según fechas de corte
+- **Múltiples deudores**: Registra gastos compartidos con varias personas a la vez
 - Actualización automática de saldos
+- **Barra de acceso rápido**: Botones siempre visibles para registro inmediato
 
 ### Módulos Adicionales
 
-- **Adeudos**: Control de deudas pendientes con seguimiento de pagos
-- **Compras MSI**: Gestión de compras a meses sin intereses
+- **Adeudos**: Control de deudas (me deben / debo) con soporte para múltiples personas por transacción
+- **Compras MSI**: Gestión de compras a meses sin intereses con cálculo automático de mensualidades
 - **Suscripciones**: Seguimiento de pagos recurrentes
+- **Historial**: Vista completa de transacciones con filtros y detalles de adeudos
 
 ---
 

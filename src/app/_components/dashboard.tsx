@@ -9,6 +9,7 @@ import { Modal } from "./modal";
 import { TransactionForm } from "./transaction-form";
 import { AccountForm } from "./account-form";
 import { signOut } from "next-auth/react";
+import Link from "next/link";
 
 interface DashboardProps {
   user: {
@@ -20,7 +21,6 @@ interface DashboardProps {
 export function Dashboard({ user }: DashboardProps) {
   const [transactionModalOpen, setTransactionModalOpen] = useState(false);
   const [accountModalOpen, setAccountModalOpen] = useState(false);
-  const [fabMenuOpen, setFabMenuOpen] = useState(false);
 
   const { data: saldos } = api.dashboard.getSaldos.useQuery();
   const { data: tarjetas } = api.tarjetas.getResumenCredito.useQuery();
@@ -50,7 +50,15 @@ export function Dashboard({ user }: DashboardProps) {
   return (
     <div className="min-h-screen bg-gray-950 pb-24 font-sans text-gray-100">
       <nav className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-800 bg-gray-900/80 px-4 py-3 backdrop-blur">
-        <h1 className="text-lg font-bold text-white">Mi Presupuesto</h1>
+        <div className="flex items-center gap-6">
+          <h1 className="text-lg font-bold text-white">Mi Presupuesto</h1>
+          <Link
+            href="/transacciones"
+            className="text-sm font-medium text-gray-400 transition-colors hover:text-white"
+          >
+            Historial
+          </Link>
+        </div>
         <div className="flex items-center gap-4">
           <span className="text-sm text-gray-400">
             {user.name ?? user.email}
@@ -340,7 +348,7 @@ export function Dashboard({ user }: DashboardProps) {
                 headers={["Servicio", "Estado", "Monto"]}
                 rows={suscripciones.map((sub) => [
                   <span key="cat" className="font-medium text-white">
-                    {sub.categoria.nombre}
+                    {sub.categoria?.nombre ?? "Sin categoría"}
                   </span>,
                   <span
                     key="estado"
@@ -400,7 +408,7 @@ export function Dashboard({ user }: DashboardProps) {
                         className="flex items-center justify-between text-sm"
                       >
                         <span className="truncate pr-2 text-gray-300">
-                          {sub.categoria.nombre}
+                          {sub.categoria?.nombre ?? "Sin categoría"}
                         </span>
                         <span className="font-medium whitespace-nowrap text-gray-400">
                           {formatMXN(Number(sub.monto))}
@@ -414,40 +422,25 @@ export function Dashboard({ user }: DashboardProps) {
         </div>
       </main>
 
-      <div className="fixed right-6 bottom-6 z-50 flex flex-col-reverse items-center gap-3">
-        {fabMenuOpen && (
-          <>
-            <button
-              type="button"
-              onClick={() => {
-                setAccountModalOpen(true);
-                setFabMenuOpen(false);
-              }}
-              className="flex h-12 items-center gap-2 rounded-full bg-gray-800 px-4 text-sm font-medium text-white shadow-lg transition-all hover:bg-gray-700"
-            >
-              <span className="text-lg">🏦</span>
-              Nueva Cuenta
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setTransactionModalOpen(true);
-                setFabMenuOpen(false);
-              }}
-              className="flex h-12 items-center gap-2 rounded-full bg-gray-800 px-4 text-sm font-medium text-white shadow-lg transition-all hover:bg-gray-700"
-            >
-              <span className="text-lg">💸</span>
-              Nueva Transacción
-            </button>
-          </>
-        )}
-        <button
-          type="button"
-          onClick={() => setFabMenuOpen(!fabMenuOpen)}
-          className={`flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 transition-all hover:scale-105 hover:bg-indigo-500 active:scale-95 ${fabMenuOpen ? "rotate-45" : ""}`}
-        >
-          <span className="mb-1 text-2xl leading-none">+</span>
-        </button>
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 bg-gradient-to-t from-gray-950 via-gray-950/90 to-transparent px-4 pt-10 pb-6 sm:px-6">
+        <div className="pointer-events-auto mx-auto flex max-w-md items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setAccountModalOpen(true)}
+            className="flex h-14 items-center justify-center gap-2 rounded-2xl border border-gray-700/50 bg-gray-800/90 px-5 text-sm font-medium text-gray-200 shadow-lg backdrop-blur transition-all hover:bg-gray-700 active:scale-95"
+          >
+            <span className="text-xl">🏦</span>
+            <span className="hidden sm:inline">Cuenta</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setTransactionModalOpen(true)}
+            className="flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-base font-bold text-white shadow-lg shadow-indigo-600/25 transition-all hover:bg-indigo-500 active:scale-95"
+          >
+            <span className="text-xl">💸</span>
+            Nueva Transacción
+          </button>
+        </div>
       </div>
 
       <Modal

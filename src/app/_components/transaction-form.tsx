@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { api } from "@/trpc/react";
 import { formatMXN } from "@/lib/format";
 
@@ -10,6 +10,9 @@ interface TransactionFormProps {
 }
 
 type TipoTransaccion = "GASTO" | "INGRESO";
+type TipoAdeudo = "POR_COBRAR" | "POR_PAGAR";
+
+const MSI_OPTIONS = [3, 6, 9, 12, 18, 24] as const;
 
 export function TransactionForm({ onSuccess, onCancel }: TransactionFormProps) {
   const [tipo, setTipo] = useState<TipoTransaccion>("GASTO");
@@ -17,15 +20,41 @@ export function TransactionForm({ onSuccess, onCancel }: TransactionFormProps) {
   const [categoriaId, setCategoriaId] = useState("");
   const [origenId, setOrigenId] = useState("");
   const [origenTipo, setOrigenTipo] = useState<"cuenta" | "tarjeta">("cuenta");
-  const [tieneAdeudo, setTieneAdeudo] = useState(false);
-  const [adeudoNombre, setAdeudoNombre] = useState("");
-  const [adeudoMonto, setAdeudoMonto] = useState("");
+
+  const [tieneAdeudos, setTieneAdeudos] = useState(false);
+  const [adeudos, setAdeudos] = useState<
+    Array<{
+      id: string;
+      nombrePersona: string;
+      monto: string;
+      tipo: TipoAdeudo;
+    }>
+  >([]);
+
+  const [esMSI, setEsMSI] = useState(false);
+  const [mesesMSI, setMesesMSI] = useState<number>(6);
+  const [descripcionMSI, setDescripcionMSI] = useState("");
+
   const [esRecurrente, setEsRecurrente] = useState(false);
 
   const utils = api.useUtils();
   const { data: categorias } = api.categorias.getAll.useQuery();
   const { data: cuentas } = api.cuentas.getAll.useQuery();
   const { data: tarjetas } = api.tarjetas.getAll.useQuery();
+
+  const resetForm = useCallback(() => {
+    setTipo("GASTO");
+    setMonto("");
+    setCategoriaId("");
+    setOrigenId("");
+    setOrigenTipo("cuenta");
+    setTieneAdeudos(false);
+    setAdeudos([]);
+    setEsMSI(false);
+    setMesesMSI(6);
+    setDescripcionMSI("");
+    setEsRecurrente(false);
+  }, []);
 
   const createMutation = api.transacciones.create.useMutation({
     onSuccess: () => {
@@ -35,13 +64,22 @@ export function TransactionForm({ onSuccess, onCancel }: TransactionFormProps) {
       void utils.adeudos.getResumen.invalidate();
       void utils.adeudos.getAll.invalidate();
       void utils.transacciones.getSuscripciones.invalidate();
+      void utils.comprasMSI.getResumen.invalidate();
+      void utils.comprasMSI.getAll.invalidate();
+      resetForm();
       onSuccess?.();
     },
   });
 
   const montoNumerico = parseFloat(monto.replace(/[^0-9.]/g, "")) || 0;
-  const adeudoMontoNumerico =
-    parseFloat(adeudoMonto.replace(/[^0-9.]/g, "")) || 0;
+
+  const totalAdeudos = adeudos.reduce((sum, a) => {
+    const monto = parseFloat(a.monto.replace(/[^0-9.]/g, "")) || 0;
+    return sum + monto;
+  }, 0);
+
+  const mensualidadMSI =
+    esMSI && montoNumerico > 0 ? montoNumerico / mesesMSI : 0;
 
   const cuentasFiltradas =
     tipo === "INGRESO"
@@ -55,9 +93,44 @@ export function TransactionForm({ onSuccess, onCancel }: TransactionFormProps) {
     setMonto(numericValue);
   };
 
-  const handleAdeudoMontoChange = (value: string) => {
-    const numericValue = value.replace(/[^0-9.]/g, "");
-    setAdeudoMonto(numericValue);
+  const addAdeudo = (tipoAdeudo: TipoAdeudo) => {
+    const newAdeudo = {
+      id: `adeudo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      nombrePersona: "",
+      monto: "",
+      tipo: tipoAdeudo,
+    };
+    setAdeudos((prev) => [...prev, newAdeudo]);
+  };
+
+  const removeAdeudo = (id: string) => {
+    setAdeudos(adeudos.filter((a) => a.id !== id));
+  };
+
+  const updateAdeudo = (
+    id: string,
+    field: "nombrePersona" | "monto",
+    value: string,
+  ) => {
+    setAdeudos(
+      adeudos.map((a) =>
+        a.id === id
+          ? {
+              ...a,
+              [field]:
+                field === "monto" ? value.replace(/[^0-9.]/g, "") : value,
+            }
+          : a,
+      ),
+    );
+  };
+
+  const handleOrigenTipoChange = (newTipo: "cuenta" | "tarjeta") => {
+    setOrigenTipo(newTipo);
+    setOrigenId("");
+    if (newTipo !== "tarjeta") {
+      setEsMSI(false);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -67,12 +140,25 @@ export function TransactionForm({ onSuccess, onCancel }: TransactionFormProps) {
     if (tipo === "GASTO" && !categoriaId) return;
     if (!origenId) return;
 
-    const adeudo =
-      tieneAdeudo && adeudoNombre && adeudoMontoNumerico > 0
+    const adeudosToSubmit =
+      tieneAdeudos && adeudos.length > 0
+        ? adeudos
+            .filter((a) => a.nombrePersona && parseFloat(a.monto) > 0)
+            .map((a) => ({
+              nombrePersona: a.nombrePersona,
+              monto: parseFloat(a.monto),
+              tipo: a.tipo,
+            }))
+        : undefined;
+
+    const msi =
+      esMSI && origenTipo === "tarjeta"
         ? {
-            nombrePersona: adeudoNombre,
-            monto: adeudoMontoNumerico,
-            tipo: "POR_COBRAR" as const,
+            descripcion:
+              descripcionMSI ??
+              categorias?.find((c) => c.id === categoriaId)?.nombre ??
+              "Compra MSI",
+            meses: mesesMSI,
           }
         : undefined;
 
@@ -83,18 +169,25 @@ export function TransactionForm({ onSuccess, onCancel }: TransactionFormProps) {
       cuentaId: origenTipo === "cuenta" ? origenId : undefined,
       tarjetaId: origenTipo === "tarjeta" ? origenId : undefined,
       esRecurrente,
-      adeudo,
+      adeudos: adeudosToSubmit,
+      msi,
     });
   };
+
+  const adeudosValidos = adeudos.every(
+    (a) => a.nombrePersona.trim() && parseFloat(a.monto) > 0,
+  );
 
   const isValid =
     montoNumerico > 0 &&
     origenId &&
     (tipo === "INGRESO" || categoriaId) &&
-    (!tieneAdeudo || (adeudoNombre && adeudoMontoNumerico > 0));
+    (!tieneAdeudos || (adeudos.length > 0 && adeudosValidos)) &&
+    (!esMSI || mesesMSI > 0);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Tipo toggle: GASTO / INGRESO */}
       <div className="flex rounded-lg border border-gray-800 bg-gray-950 p-1">
         <button
           type="button"
@@ -102,6 +195,7 @@ export function TransactionForm({ onSuccess, onCancel }: TransactionFormProps) {
             setTipo("GASTO");
             setOrigenTipo("cuenta");
             setOrigenId("");
+            setEsMSI(false);
           }}
           className={`flex-1 rounded-md py-2 text-sm font-medium transition-colors ${
             tipo === "GASTO"
@@ -115,7 +209,9 @@ export function TransactionForm({ onSuccess, onCancel }: TransactionFormProps) {
           type="button"
           onClick={() => {
             setTipo("INGRESO");
-            setTieneAdeudo(false);
+            setTieneAdeudos(false);
+            setAdeudos([]);
+            setEsMSI(false);
             setOrigenTipo("cuenta");
             setOrigenId("");
           }}
@@ -129,6 +225,7 @@ export function TransactionForm({ onSuccess, onCancel }: TransactionFormProps) {
         </button>
       </div>
 
+      {/* Monto */}
       <div>
         <label className="mb-2 block text-sm font-medium text-gray-400">
           Monto
@@ -153,6 +250,7 @@ export function TransactionForm({ onSuccess, onCancel }: TransactionFormProps) {
         )}
       </div>
 
+      {/* Categoría (solo para gastos) */}
       {tipo === "GASTO" && (
         <div>
           <label className="mb-2 block text-sm font-medium text-gray-400">
@@ -173,6 +271,7 @@ export function TransactionForm({ onSuccess, onCancel }: TransactionFormProps) {
         </div>
       )}
 
+      {/* Origen / Destino */}
       <div>
         <label className="mb-2 block text-sm font-medium text-gray-400">
           {tipo === "GASTO" ? "Origen" : "Destino"}
@@ -182,10 +281,7 @@ export function TransactionForm({ onSuccess, onCancel }: TransactionFormProps) {
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  setOrigenTipo("cuenta");
-                  setOrigenId("");
-                }}
+                onClick={() => handleOrigenTipoChange("cuenta")}
                 className={`flex-1 rounded-lg border px-3 py-2 text-sm transition-colors ${
                   origenTipo === "cuenta"
                     ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
@@ -196,10 +292,7 @@ export function TransactionForm({ onSuccess, onCancel }: TransactionFormProps) {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setOrigenTipo("tarjeta");
-                  setOrigenId("");
-                }}
+                onClick={() => handleOrigenTipoChange("tarjeta")}
                 className={`flex-1 rounded-lg border px-3 py-2 text-sm transition-colors ${
                   origenTipo === "tarjeta"
                     ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
@@ -234,67 +327,205 @@ export function TransactionForm({ onSuccess, onCancel }: TransactionFormProps) {
         </div>
       </div>
 
-      {tipo === "GASTO" && (
+      {/* MSI Toggle - Solo visible si es tarjeta de crédito */}
+      {tipo === "GASTO" && origenTipo === "tarjeta" && origenId && (
         <div className="space-y-3">
           <label className="flex items-center gap-3">
             <input
               type="checkbox"
-              checked={tieneAdeudo}
-              onChange={(e) => setTieneAdeudo(e.target.checked)}
+              checked={esMSI}
+              onChange={(e) => setEsMSI(e.target.checked)}
               className="h-4 w-4 rounded border-gray-700 bg-gray-950 text-indigo-500 focus:ring-indigo-500"
             />
             <span className="text-sm text-gray-300">
-              Alguien me debe parte de este gasto
+              Compra a Meses Sin Intereses (MSI)
             </span>
           </label>
 
-          {tieneAdeudo && (
-            <div className="grid gap-3 rounded-lg border border-gray-800 bg-gray-950/50 p-4 transition-all">
+          {esMSI && (
+            <div className="space-y-3 rounded-lg border border-indigo-500/20 bg-indigo-500/5 p-4">
+              <div>
+                <label className="mb-2 block text-xs font-medium text-gray-500">
+                  Número de meses
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {MSI_OPTIONS.map((meses) => (
+                    <button
+                      key={meses}
+                      type="button"
+                      onClick={() => setMesesMSI(meses)}
+                      className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+                        mesesMSI === meses
+                          ? "border-indigo-500 bg-indigo-500/20 text-indigo-400"
+                          : "border-gray-700 text-gray-400 hover:border-gray-600"
+                      }`}
+                    >
+                      {meses}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-500">
-                  Nombre de la persona
+                  Descripción (opcional)
                 </label>
                 <input
                   type="text"
-                  value={adeudoNombre}
-                  onChange={(e) => setAdeudoNombre(e.target.value)}
-                  placeholder="Ej: Juan"
+                  value={descripcionMSI}
+                  onChange={(e) => setDescripcionMSI(e.target.value)}
+                  placeholder="Ej: Laptop, TV, etc."
                   className="w-full rounded-lg border border-gray-800 bg-gray-950 px-3 py-2 text-white placeholder:text-gray-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                 />
               </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-500">
-                  Monto que me debe
-                </label>
-                <div className="relative">
-                  <span className="absolute top-1/2 left-3 -translate-y-1/2 text-gray-500">
-                    $
-                  </span>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={adeudoMonto}
-                    onChange={(e) => handleAdeudoMontoChange(e.target.value)}
-                    placeholder="0.00"
-                    className="w-full rounded-lg border border-gray-800 bg-gray-950 py-2 pr-3 pl-8 text-white placeholder:text-gray-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-                  />
+
+              {montoNumerico > 0 && (
+                <div className="rounded-lg bg-gray-900/50 p-3">
+                  <p className="text-sm text-gray-400">
+                    Mensualidad:{" "}
+                    <span className="font-bold text-indigo-400">
+                      {formatMXN(mensualidadMSI)}
+                    </span>
+                    <span className="text-gray-500"> × {mesesMSI} meses</span>
+                  </p>
                 </div>
-              </div>
-              {adeudoMontoNumerico > 0 && montoNumerico > 0 && (
-                <p className="text-sm text-gray-400">
-                  Tu gasto real:{" "}
-                  <span className="font-medium text-white">
-                    {formatMXN(
-                      Math.max(0, montoNumerico - adeudoMontoNumerico),
-                    )}
-                  </span>
-                </p>
               )}
             </div>
           )}
         </div>
       )}
 
+      {/* Adeudos - Multiple debtors */}
+      {tipo === "GASTO" && (
+        <div className="space-y-3">
+          <label className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              checked={tieneAdeudos}
+              onChange={(e) => {
+                setTieneAdeudos(e.target.checked);
+                if (!e.target.checked) setAdeudos([]);
+              }}
+              className="h-4 w-4 rounded border-gray-700 bg-gray-950 text-indigo-500 focus:ring-indigo-500"
+            />
+            <span className="text-sm text-gray-300">Registrar adeudos</span>
+          </label>
+
+          {tieneAdeudos && (
+            <div className="space-y-3 rounded-lg border border-gray-800 bg-gray-950/50 p-4">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => addAdeudo("POR_COBRAR")}
+                  className="flex-1 rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-400 transition-colors hover:bg-green-500/20"
+                >
+                  + Me deben
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addAdeudo("POR_PAGAR")}
+                  className="flex-1 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/20"
+                >
+                  + Yo debo
+                </button>
+              </div>
+
+              {adeudos.map((adeudo) => (
+                <div
+                  key={adeudo.id}
+                  className={`rounded-lg border p-3 ${
+                    adeudo.tipo === "POR_COBRAR"
+                      ? "border-green-500/30 bg-green-500/5"
+                      : "border-red-500/30 bg-red-500/5"
+                  }`}
+                >
+                  <div className="mb-2 flex items-center justify-between">
+                    <span
+                      className={`text-xs font-medium ${
+                        adeudo.tipo === "POR_COBRAR"
+                          ? "text-green-400"
+                          : "text-red-400"
+                      }`}
+                    >
+                      {adeudo.tipo === "POR_COBRAR" ? "Me debe" : "Yo debo"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeAdeudo(adeudo.id)}
+                      className="text-gray-500 transition-colors hover:text-red-400"
+                    >
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <input
+                      type="text"
+                      value={adeudo.nombrePersona}
+                      onChange={(e) =>
+                        updateAdeudo(adeudo.id, "nombrePersona", e.target.value)
+                      }
+                      placeholder="Nombre de la persona"
+                      className="w-full rounded-lg border border-gray-800 bg-gray-950 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                    />
+                    <div className="relative">
+                      <span className="absolute top-1/2 left-3 -translate-y-1/2 text-gray-500">
+                        $
+                      </span>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={adeudo.monto}
+                        onChange={(e) =>
+                          updateAdeudo(adeudo.id, "monto", e.target.value)
+                        }
+                        placeholder="0.00"
+                        className="w-full rounded-lg border border-gray-800 bg-gray-950 py-2 pr-3 pl-8 text-sm text-white placeholder:text-gray-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {adeudos.length === 0 && (
+                <p className="text-center text-sm text-gray-500">
+                  Agrega personas que te deben o a quienes les debes
+                </p>
+              )}
+
+              {totalAdeudos > 0 && montoNumerico > 0 && (
+                <div className="rounded-lg bg-gray-900/50 p-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Total adeudos:</span>
+                    <span className="font-medium text-white">
+                      {formatMXN(totalAdeudos)}
+                    </span>
+                  </div>
+                  <div className="mt-1 flex justify-between text-sm">
+                    <span className="text-gray-400">Tu gasto real:</span>
+                    <span className="font-medium text-indigo-400">
+                      {formatMXN(Math.max(0, montoNumerico - totalAdeudos))}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Recurrente */}
       <label className="flex items-center gap-3">
         <input
           type="checkbox"
@@ -309,6 +540,7 @@ export function TransactionForm({ onSuccess, onCancel }: TransactionFormProps) {
         </span>
       </label>
 
+      {/* Botones */}
       <div className="flex gap-3 pt-2">
         {onCancel && (
           <button
