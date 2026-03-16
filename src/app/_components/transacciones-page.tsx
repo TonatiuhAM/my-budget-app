@@ -92,7 +92,6 @@ export function TransaccionesPage() {
       tipo?: "GASTO" | "INGRESO";
       soloAdeudos?: boolean;
       soloMSI?: boolean;
-      cuentaId?: string;
       categoriaId?: string;
       fechaDesde?: Date;
       fechaHasta?: Date;
@@ -103,16 +102,32 @@ export function TransaccionesPage() {
     if (filters.tipo === "ADEUDO") input.soloAdeudos = true;
     if (filters.tipo === "MSI") input.soloMSI = true;
 
-    if (filters.cuentaIds.length === 1) input.cuentaId = filters.cuentaIds[0];
-
     if (filters.categoriaIds.length === 1)
       input.categoriaId = filters.categoriaIds[0];
 
-    if (filters.fechaDesde) input.fechaDesde = new Date(filters.fechaDesde);
+    if (filters.fechaDesde) {
+      const [year, month, day] = filters.fechaDesde.split("-").map(Number);
+      input.fechaDesde = new Date(
+        year ?? 0,
+        (month ?? 1) - 1,
+        day ?? 1,
+        0,
+        0,
+        0,
+        0,
+      );
+    }
     if (filters.fechaHasta) {
-      const fecha = new Date(filters.fechaHasta);
-      fecha.setHours(23, 59, 59, 999);
-      input.fechaHasta = fecha;
+      const [year, month, day] = filters.fechaHasta.split("-").map(Number);
+      input.fechaHasta = new Date(
+        year ?? 0,
+        (month ?? 1) - 1,
+        day ?? 1,
+        23,
+        59,
+        59,
+        999,
+      );
     }
 
     return input;
@@ -144,13 +159,16 @@ export function TransaccionesPage() {
     if (!transaccionesData?.items) return [];
 
     return transaccionesData.items.filter((t) => {
-      if (
-        filters.cuentaIds.length > 1 &&
-        t.cuentaId &&
-        !filters.cuentaIds.includes(t.cuentaId)
-      ) {
-        return false;
+      if (filters.cuentaIds.length > 0) {
+        const transaccionCuentaOTarjetaId = t.cuentaId ?? t.tarjetaId;
+        if (
+          !transaccionCuentaOTarjetaId ||
+          !filters.cuentaIds.includes(transaccionCuentaOTarjetaId)
+        ) {
+          return false;
+        }
       }
+
       if (
         filters.categoriaIds.length > 1 &&
         t.categoriaId &&
@@ -317,9 +335,21 @@ export function TransaccionesPage() {
                             className="flex items-center justify-between p-4 transition-colors hover:bg-gray-800/50"
                           >
                             <div className="flex items-center gap-3">
-                              <div>
+                              <div className="min-w-0 flex-1">
                                 <p className="font-medium text-white">
                                   {transaccion.categoria?.nombre ?? "Ingreso"}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {transaccion.cuenta?.nombre ??
+                                    transaccion.tarjeta?.nombre ??
+                                    "Sin cuenta"}
+                                  {" · "}
+                                  {new Date(
+                                    transaccion.fecha,
+                                  ).toLocaleTimeString("es-MX", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
                                 </p>
                               </div>
                             </div>
