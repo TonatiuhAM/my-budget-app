@@ -11,7 +11,6 @@ type TipoFiltro = "TODOS" | "GASTO" | "INGRESO" | "ADEUDO" | "MSI";
 interface TransactionFilters {
   tipo: TipoFiltro;
   cuentaIds: string[];
-  categoriaIds: string[];
   fechaDesde: string;
   fechaHasta: string;
 }
@@ -66,7 +65,6 @@ export function TransaccionesPage() {
   const [filters, setFilters] = useState<TransactionFilters>({
     tipo: "TODOS",
     cuentaIds: [],
-    categoriaIds: [],
     fechaDesde: "",
     fechaHasta: "",
   });
@@ -79,9 +77,8 @@ export function TransaccionesPage() {
     null,
   );
   const [editMonto, setEditMonto] = useState("");
-  const [editCategoriaId, setEditCategoriaId] = useState("");
+  const [editDescripcion, setEditDescripcion] = useState("");
 
-  const { data: categorias } = api.categorias.getAll.useQuery();
   const { data: cuentas } = api.cuentas.getAll.useQuery();
   const { data: tarjetas } = api.tarjetas.getAll.useQuery();
 
@@ -92,7 +89,6 @@ export function TransaccionesPage() {
       tipo?: "GASTO" | "INGRESO";
       soloAdeudos?: boolean;
       soloMSI?: boolean;
-      categoriaId?: string;
       fechaDesde?: Date;
       fechaHasta?: Date;
     } = {};
@@ -101,9 +97,6 @@ export function TransaccionesPage() {
     if (filters.tipo === "INGRESO") input.tipo = "INGRESO";
     if (filters.tipo === "ADEUDO") input.soloAdeudos = true;
     if (filters.tipo === "MSI") input.soloMSI = true;
-
-    if (filters.categoriaIds.length === 1)
-      input.categoriaId = filters.categoriaIds[0];
 
     if (filters.fechaDesde) {
       const [year, month, day] = filters.fechaDesde.split("-").map(Number);
@@ -168,17 +161,9 @@ export function TransaccionesPage() {
           return false;
         }
       }
-
-      if (
-        filters.categoriaIds.length > 1 &&
-        t.categoriaId &&
-        !filters.categoriaIds.includes(t.categoriaId)
-      ) {
-        return false;
-      }
       return true;
     });
-  }, [transaccionesData, filters.cuentaIds, filters.categoriaIds]);
+  }, [transaccionesData, filters.cuentaIds]);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleEdit = (id: string) => {
@@ -186,7 +171,7 @@ export function TransaccionesPage() {
     if (transaccion) {
       setSelectedTransaccion(id);
       setEditMonto(String(transaccion.monto));
-      setEditCategoriaId(transaccion.categoriaId ?? "");
+      setEditDescripcion(transaccion.descripcion ?? "");
       setEditModalOpen(true);
     }
   };
@@ -208,7 +193,7 @@ export function TransaccionesPage() {
       updateMutation.mutate({
         id: selectedTransaccion,
         monto: parseFloat(editMonto) || undefined,
-        categoriaId: editCategoriaId || undefined,
+        descripcion: editDescripcion || undefined,
       });
     }
   };
@@ -231,7 +216,6 @@ export function TransaccionesPage() {
   const hasActiveFilters =
     filters.tipo !== "TODOS" ||
     filters.cuentaIds.length > 0 ||
-    filters.categoriaIds.length > 0 ||
     filters.fechaDesde ||
     filters.fechaHasta;
 
@@ -337,7 +321,10 @@ export function TransaccionesPage() {
                             <div className="flex items-center gap-3">
                               <div className="min-w-0 flex-1">
                                 <p className="font-medium text-white">
-                                  {transaccion.categoria?.nombre ?? "Ingreso"}
+                                  {transaccion.descripcion ||
+                                    (transaccion.tipo === "INGRESO"
+                                      ? "Ingreso"
+                                      : "Sin descripción")}
                                 </p>
                                 <p className="text-xs text-gray-500">
                                   {transaccion.cuenta?.nombre ??
@@ -438,43 +425,6 @@ export function TransaccionesPage() {
                     className="h-4 w-4 rounded border-gray-700 bg-gray-950 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-gray-900"
                   />
                   <span className="text-sm text-gray-300">{cuenta.nombre}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Categorías */}
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-300">
-              Categorías
-            </label>
-            <div className="space-y-2">
-              {categorias?.map((cat) => (
-                <label
-                  key={cat.id}
-                  className="flex cursor-pointer items-center gap-3"
-                >
-                  <input
-                    type="checkbox"
-                    checked={tempFilters.categoriaIds.includes(cat.id)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setTempFilters({
-                          ...tempFilters,
-                          categoriaIds: [...tempFilters.categoriaIds, cat.id],
-                        });
-                      } else {
-                        setTempFilters({
-                          ...tempFilters,
-                          categoriaIds: tempFilters.categoriaIds.filter(
-                            (id) => id !== cat.id,
-                          ),
-                        });
-                      }
-                    }}
-                    className="h-4 w-4 rounded border-gray-700 bg-gray-950 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-gray-900"
-                  />
-                  <span className="text-sm text-gray-300">{cat.nombre}</span>
                 </label>
               ))}
             </div>
@@ -599,19 +549,15 @@ export function TransaccionesPage() {
           </div>
           <div>
             <label className="mb-1 block text-sm text-gray-400">
-              Categoría
+              Descripción
             </label>
-            <select
-              value={editCategoriaId}
-              onChange={(e) => setEditCategoriaId(e.target.value)}
-              className="w-full rounded-lg border border-gray-800 bg-gray-950 px-4 py-3 text-white focus:border-indigo-500 focus:outline-none"
-            >
-              {categorias?.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.nombre}
-                </option>
-              ))}
-            </select>
+            <input
+              type="text"
+              value={editDescripcion}
+              onChange={(e) => setEditDescripcion(e.target.value)}
+              placeholder="¿De qué fue este gasto?"
+              className="w-full rounded-lg border border-gray-800 bg-gray-950 px-4 py-3 text-white placeholder:text-gray-600 focus:border-indigo-500 focus:outline-none"
+            />
           </div>
           <div className="flex gap-3 pt-2">
             <button

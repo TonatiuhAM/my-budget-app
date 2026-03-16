@@ -9,7 +9,6 @@ export const transaccionesRouter = createTRPCRouter({
         .object({
           limit: z.number().min(1).max(100).default(50),
           cursor: z.string().nullish(),
-          categoriaId: z.string().optional(),
           tarjetaId: z.string().optional(),
           cuentaId: z.string().optional(),
           tipo: z.enum(["GASTO", "INGRESO"]).optional(),
@@ -29,7 +28,6 @@ export const transaccionesRouter = createTRPCRouter({
         cursor: cursor ? { id: cursor } : undefined,
         where: {
           userId: ctx.session.user.id,
-          categoriaId: input?.categoriaId,
           tarjetaId: input?.tarjetaId,
           cuentaId: input?.cuentaId,
           tipo: input?.tipo,
@@ -41,7 +39,6 @@ export const transaccionesRouter = createTRPCRouter({
           ...(input?.soloMSI ? { compraMSIId: { not: null } } : {}),
         },
         include: {
-          categoria: true,
           cuenta: true,
           tarjeta: true,
           adeudos: true,
@@ -73,7 +70,7 @@ export const transaccionesRouter = createTRPCRouter({
       z.object({
         tipo: z.enum(["GASTO", "INGRESO"]),
         monto: z.number().positive(),
-        categoriaId: z.string().optional(),
+        descripcion: z.string().max(200).default(""),
         cuentaId: z.string().optional(),
         tarjetaId: z.string().optional(),
         esRecurrente: z.boolean().default(false),
@@ -96,7 +93,7 @@ export const transaccionesRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { adeudos, msi, tipo, ...transaccionData } = input;
+      const { adeudos, msi, tipo, descripcion, ...transaccionData } = input;
 
       const totalAdeudos =
         adeudos && tipo === "GASTO"
@@ -124,8 +121,8 @@ export const transaccionesRouter = createTRPCRouter({
           data: {
             ...transaccionData,
             tipo,
+            descripcion,
             monto: montoReal,
-            categoriaId: transaccionData.categoriaId,
             userId: ctx.session.user.id,
             compraMSIId: compraMSI?.id,
             pagoNumero: compraMSI ? 1 : null,
@@ -163,7 +160,7 @@ export const transaccionesRouter = createTRPCRouter({
       z.object({
         id: z.string(),
         monto: z.number().positive().optional(),
-        categoriaId: z.string().optional(),
+        descripcion: z.string().max(200).optional(),
         fecha: z.date().optional(),
       }),
     )
@@ -195,7 +192,6 @@ export const transaccionesRouter = createTRPCRouter({
           where: { id },
           data,
           include: {
-            categoria: true,
             cuenta: true,
             tarjeta: true,
             adeudos: true,
@@ -254,7 +250,7 @@ export const transaccionesRouter = createTRPCRouter({
         userId: ctx.session.user.id,
         esRecurrente: true,
       },
-      include: { categoria: true, tarjeta: true, cuenta: true },
+      include: { tarjeta: true, cuenta: true },
       orderBy: { fecha: "desc" },
     });
   }),

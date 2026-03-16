@@ -124,8 +124,7 @@ export function DeudasPage() {
                           {adeudo.nombrePersona}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {adeudo.transaccion.categoria?.nombre ??
-                            "Sin categoría"}
+                          {adeudo.transaccion.descripcion || "Sin descripción"}
                         </p>
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -188,8 +187,7 @@ export function DeudasPage() {
                           {adeudo.nombrePersona}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {adeudo.transaccion.categoria?.nombre ??
-                            "Sin categoría"}
+                          {adeudo.transaccion.descripcion || "Sin descripción"}
                         </p>
                       </td>
                       <td className="px-4 py-3 text-right">

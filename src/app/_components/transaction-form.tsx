@@ -17,7 +17,7 @@ const MSI_OPTIONS = [3, 6, 9, 12, 18, 24] as const;
 export function TransactionForm({ onSuccess, onCancel }: TransactionFormProps) {
   const [tipo, setTipo] = useState<TipoTransaccion>("GASTO");
   const [monto, setMonto] = useState("");
-  const [categoriaId, setCategoriaId] = useState("");
+  const [descripcion, setDescripcion] = useState("");
   const [origenId, setOrigenId] = useState("");
   const [origenTipo, setOrigenTipo] = useState<"cuenta" | "tarjeta">("cuenta");
 
@@ -38,14 +38,13 @@ export function TransactionForm({ onSuccess, onCancel }: TransactionFormProps) {
   const [esRecurrente, setEsRecurrente] = useState(false);
 
   const utils = api.useUtils();
-  const { data: categorias } = api.categorias.getAll.useQuery();
   const { data: cuentas } = api.cuentas.getAll.useQuery();
   const { data: tarjetas } = api.tarjetas.getAll.useQuery();
 
   const resetForm = useCallback(() => {
     setTipo("GASTO");
     setMonto("");
-    setCategoriaId("");
+    setDescripcion("");
     setOrigenId("");
     setOrigenTipo("cuenta");
     setTieneAdeudos(false);
@@ -137,7 +136,6 @@ export function TransactionForm({ onSuccess, onCancel }: TransactionFormProps) {
     e.preventDefault();
 
     if (montoNumerico <= 0) return;
-    if (tipo === "GASTO" && !categoriaId) return;
     if (!origenId) return;
 
     const adeudosToSubmit =
@@ -154,10 +152,7 @@ export function TransactionForm({ onSuccess, onCancel }: TransactionFormProps) {
     const msi =
       esMSI && origenTipo === "tarjeta"
         ? {
-            descripcion:
-              descripcionMSI ??
-              categorias?.find((c) => c.id === categoriaId)?.nombre ??
-              "Compra MSI",
+            descripcion: descripcionMSI || descripcion || "Compra MSI",
             meses: mesesMSI,
           }
         : undefined;
@@ -165,7 +160,7 @@ export function TransactionForm({ onSuccess, onCancel }: TransactionFormProps) {
     createMutation.mutate({
       tipo,
       monto: montoNumerico,
-      categoriaId: tipo === "GASTO" ? categoriaId : undefined,
+      descripcion,
       cuentaId: origenTipo === "cuenta" ? origenId : undefined,
       tarjetaId: origenTipo === "tarjeta" ? origenId : undefined,
       esRecurrente,
@@ -181,7 +176,6 @@ export function TransactionForm({ onSuccess, onCancel }: TransactionFormProps) {
   const isValid =
     montoNumerico > 0 &&
     origenId &&
-    (tipo === "INGRESO" || categoriaId) &&
     (!tieneAdeudos || (adeudos.length > 0 && adeudosValidos)) &&
     (!esMSI || mesesMSI > 0);
 
@@ -250,26 +244,19 @@ export function TransactionForm({ onSuccess, onCancel }: TransactionFormProps) {
         )}
       </div>
 
-      {/* Categoría (solo para gastos) */}
-      {tipo === "GASTO" && (
-        <div>
-          <label className="mb-2 block text-sm font-medium text-gray-400">
-            Categoría
-          </label>
-          <select
-            value={categoriaId}
-            onChange={(e) => setCategoriaId(e.target.value)}
-            className="w-full rounded-lg border border-gray-800 bg-gray-950 px-4 py-3 text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-          >
-            <option value="">Seleccionar categoría</option>
-            {categorias?.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.nombre}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
+      {/* Descripción */}
+      <div>
+        <label className="mb-2 block text-sm font-medium text-gray-400">
+          Descripción
+        </label>
+        <input
+          type="text"
+          value={descripcion}
+          onChange={(e) => setDescripcion(e.target.value)}
+          placeholder="¿De qué fue este gasto?"
+          className="w-full rounded-lg border border-gray-800 bg-gray-950 px-4 py-3 text-white placeholder:text-gray-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+        />
+      </div>
 
       {/* Origen / Destino */}
       <div>

@@ -340,7 +340,7 @@ export function Dashboard({ user }: DashboardProps) {
                 headers={["Servicio", "Estado", "Monto"]}
                 rows={suscripciones.map((sub) => [
                   <span key="cat" className="font-medium text-white">
-                    {sub.categoria?.nombre ?? "Sin categoría"}
+                    {sub.descripcion || "Sin descripción"}
                   </span>,
                   <span
                     key="estado"
@@ -400,7 +400,7 @@ export function Dashboard({ user }: DashboardProps) {
                         className="flex items-center justify-between text-sm"
                       >
                         <span className="truncate pr-2 text-gray-300">
-                          {sub.categoria?.nombre ?? "Sin categoría"}
+                          {sub.descripcion || "Sin descripción"}
                         </span>
                         <span className="font-medium whitespace-nowrap text-gray-400">
                           {formatMXN(Number(sub.monto))}

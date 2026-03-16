@@ -25,7 +25,7 @@ Una herramienta moderna y elegante diseñada para el control integral de tus fin
 ### Registro de Transacciones
 
 - Toggle intuitivo entre **Gastos e Ingresos**
-- Categorización personalizada de movimientos
+- **Descripción libre**: Escribe de qué fue el gasto sin necesidad de seleccionar categorías predefinidas
 - Selección de cuenta origen/destino
 - **Compras MSI**: Divide automáticamente compras a meses sin intereses según fechas de corte
 - **Múltiples deudores**: Registra gastos compartidos con varias personas a la vez
@@ -37,7 +37,7 @@ Una herramienta moderna y elegante diseñada para el control integral de tus fin
 - **Adeudos**: Control de deudas (me deben / debo) con soporte para múltiples personas por transacción
 - **Compras MSI**: Gestión de compras a meses sin intereses con cálculo automático de mensualidades
 - **Suscripciones**: Seguimiento de pagos recurrentes
-- **Transacciones**: Vista agrupada por fecha con filtros avanzados (cuentas, categorías, tipo, periodos de facturación)
+- **Transacciones**: Vista agrupada por fecha con filtros avanzados (cuentas, tipo, periodos de facturación)
 
 ---
 

@@ -18,7 +18,7 @@ export const adeudosRouter = createTRPCRouter({
           transaccion: { userId: ctx.session.user.id },
           ...(input?.soloActivos !== false ? { estaPagado: false } : {}),
         },
-        include: { transaccion: { include: { categoria: true } } },
+        include: { transaccion: true },
         orderBy: { transaccion: { fecha: "desc" } },
       });
     }),
