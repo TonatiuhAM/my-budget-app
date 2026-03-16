@@ -78,17 +78,24 @@ export const tarjetasRouter = createTRPCRouter({
       const now = new Date();
       const diaCorte = tarjeta.diaCorte;
 
-      const inicioPerido = new Date(
+      // Calculate billing period start date
+      // If today is after cut day, period started on cut day + 1 of previous month
+      // If today is on or before cut day, period started on cut day + 1 of two months ago
+      const inicioPeriodo = new Date(
         now.getFullYear(),
         now.getMonth(),
-        diaCorte,
+        diaCorte + 1,
       );
-      if (now.getDate() <= diaCorte) {
-        inicioPerido.setMonth(inicioPerido.getMonth() - 1);
+      if (now.getDate() > diaCorte) {
+        // We're past the cut date, so current period started last month
+        inicioPeriodo.setMonth(inicioPeriodo.getMonth() - 1);
+      } else {
+        // We're before/on cut date, so current period started two months ago
+        inicioPeriodo.setMonth(inicioPeriodo.getMonth() - 2);
       }
 
       const gastoPeriodoActual = tarjeta.transacciones
-        .filter((t) => t.fecha >= inicioPerido)
+        .filter((t) => t.tipo === "GASTO" && t.fecha >= inicioPeriodo)
         .reduce((sum, t) => sum + Number(t.monto), 0);
 
       const mensualidadMSI = tarjeta.comprasMSI.reduce((sum, msi) => {
