@@ -47,3 +47,6 @@ yarn-error.log*
 
 # generated prisma client
 /generated
+
+# AI instructions (prompts, coding rules, model behavior guides)
+/IA/
